@@ -911,6 +911,59 @@ esac
             self.assertTrue(constructed.startswith(f"{fake_bin}:"))
             self.assertIn(custom_path, constructed)
 
+        # Functional execution under a NixOS-style isolated PATH with only dirname stub (POSIX only)
+        if os.name == "nt":
+            return
+
+        source = REPO_ROOT / "backend/testing/desktop_beta_admission/run.sh"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            runner = root / "backend/testing/desktop_beta_admission/run.sh"
+            runner.parent.mkdir(parents=True)
+            shutil.copy2(source, runner)
+            (root / "backend/.python-version").write_text("3.11\n", encoding="utf-8")
+            bin_dir = root / "fake-bin"
+            bin_dir.mkdir()
+            capture = root / "node-args.txt"
+            for name, body in {
+                "uv": "#!/bin/sh\nexit 99\n",
+                "node": f"""#!/bin/sh
+case "$1" in
+  -p) echo 22 ;;
+  *emulator_config.mjs) printf '45678 45679\\n' ;;
+  *supervise.mjs) printf '%s\\n' "$@" > "{capture}" ;;
+esac
+""",
+                "java": "#!/bin/sh\necho '    java.version = 21.0.1' >&2\n",
+            }.items():
+                path = bin_dir / name
+                path.write_text(body, encoding="utf-8")
+                path.chmod(0o755)
+
+            # Create a NixOS-style PATH containing only a dirname stub
+            nixos_bin = root / "nixos-sw-bin"
+            nixos_bin.mkdir()
+            dirname_stub = nixos_bin / "dirname"
+            dirname_stub.write_text(
+                '#!/bin/sh\n'
+                'for arg in "$@"; do\n'
+                '  case "$arg" in\n'
+                '    */*) echo "${arg%/*}" ;;\n'
+                '    *) echo "." ;;\n'
+                '  esac\n'
+                'done\n',
+                encoding="utf-8",
+            )
+            dirname_stub.chmod(0o755)
+
+            env = os.environ.copy()
+            # NixOS host PATH has dirname only under nixos_bin, not /usr/bin:/bin
+            env["PATH"] = f"{bin_dir}:{nixos_bin}"
+            env["TMPDIR"] = str(root)
+            result = subprocess.run(["bash", str(runner)], text=True, capture_output=True, env=env, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(capture.exists(), "run.sh failed to reach supervise.mjs under NixOS PATH")
+
     def test_trigger_matching_selects_only_relevant_checks(self) -> None:
         manifest = load_manifest(MANIFEST_PATH)
         selected = {check.id for check in resolve_checks(manifest, ["app/lib/widgets/example.dart"], "ci")}
