@@ -261,14 +261,28 @@ class Gateway:
                 # fully unwound failure must no longer block newer FIFO jobs.
                 await run_blocking(db_executor, self.store.settle, path)
                 self._log_failure(error)
-                await self._settle_provider_turn(inbox_message(payload), False)
+                try:
+                    await self._settle_provider_turn(inbox_message(payload), False)
+                except Exception as settle_error:
+                    logging.getLogger(__name__).warning(
+                        'Messaging provider turn failure settlement skipped provider=%s error_type=%s',
+                        self.adapter.provider,
+                        type(settle_error).__name__,
+                    )
                 return None  # settled failure: drain the next head, without replay
             raise
         else:
             # False is a lease miss: the row is pending again and its turn stays open.
-            message = inbox_message(payload)
-            if result is not False and message.provider_message_id not in self._settle_deferred:
-                await self._settle_provider_turn(message, True)
+            try:
+                message = inbox_message(payload)
+                if result is not False and message.provider_message_id not in self._settle_deferred:
+                    await self._settle_provider_turn(message, True)
+            except Exception as settle_error:
+                logging.getLogger(__name__).warning(
+                    'Messaging provider turn success settlement skipped provider=%s error_type=%s',
+                    self.adapter.provider,
+                    type(settle_error).__name__,
+                )
             return result
         finally:
             # A lease miss puts this head back to pending. Waking it here spins
