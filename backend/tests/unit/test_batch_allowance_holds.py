@@ -11,6 +11,10 @@ from utils.batch_pipeline.allowance_hold import generation
 from database.batch_pipeline_allowance_hold import enabled
 from utils.batch_pipeline import allowance_hold
 from utils import backfill_hours_cap, stt_cap_dispatch
+
+# entitlement() imports utils.subscription lazily. Load it at collection so the
+# first test that reaches entitlement() is not charged the one-time import.
+from utils import subscription as _subscription  # noqa: F401
 from utils.batch_pipeline.scheduler import Scheduler
 from utils.referral_campaign import CAMPAIGN_ID, GRANT_FIELD, effective_subscription_payload
 from utils.transcription_allowance import TranscriptionAllowance
