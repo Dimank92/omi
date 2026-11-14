@@ -73,16 +73,27 @@ def test_upgrade_resolves_currency_matched_price_when_base_usd_requested(payment
         },
     }
 
-    with patch.object(router, "_validate_price_id"), \
-         patch.object(router.users_db, "get_user_subscription", return_value=current_sub), \
-         patch.object(router, "is_paid_plan", return_value=True), \
-         patch.object(router, "get_plan_type_from_price_id", side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2), \
-         patch.object(router.stripe.Price, "retrieve", side_effect=lambda p: mock_usd_price if p == "price_unlimited_usd" else mock_jpy_resolved_price), \
-         patch.object(router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)), \
-         patch.object(router.stripe.Subscription, "modify", return_value=mock_updated_sub) as mock_sub_modify, \
-         patch.object(router.stripe, "SubscriptionSchedule"), \
-         patch.object(router, "price_for_currency", return_value=mock_jpy_resolved_price) as mock_pfc, \
-         patch.object(router.users_db, "update_user_subscription"):
+    with patch.object(router, "_validate_price_id"), patch.object(
+        router.users_db, "get_user_subscription", return_value=current_sub
+    ), patch.object(router, "is_paid_plan", return_value=True), patch.object(
+        router,
+        "get_plan_type_from_price_id",
+        side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2,
+    ), patch.object(
+        router.stripe.Price,
+        "retrieve",
+        side_effect=lambda p: mock_usd_price if p == "price_unlimited_usd" else mock_jpy_resolved_price,
+    ), patch.object(
+        router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)
+    ), patch.object(
+        router.stripe.Subscription, "modify", return_value=mock_updated_sub
+    ) as mock_sub_modify, patch.object(
+        router.stripe, "SubscriptionSchedule"
+    ), patch.object(
+        router, "price_for_currency", return_value=mock_jpy_resolved_price
+    ) as mock_pfc, patch.object(
+        router.users_db, "update_user_subscription"
+    ):
 
         request = router.UpgradeSubscriptionRequest(price_id="price_unlimited_usd")
         response = router.upgrade_subscription_endpoint(request, uid=uid)
@@ -132,13 +143,19 @@ def test_upgrade_rejects_cleanly_when_currency_cannot_be_resolved(payment_router
     mock_usd_price.currency = "usd"
     mock_usd_price.recurring.interval = "month"
 
-    with patch.object(router, "_validate_price_id"), \
-         patch.object(router.users_db, "get_user_subscription", return_value=current_sub), \
-         patch.object(router, "is_paid_plan", return_value=True), \
-         patch.object(router, "get_plan_type_from_price_id", side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2), \
-         patch.object(router.stripe.Price, "retrieve", return_value=mock_usd_price), \
-         patch.object(router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)), \
-         patch.object(router, "price_for_currency", side_effect=BillingCurrencyUnavailable("Not available in gbp")):
+    with patch.object(router, "_validate_price_id"), patch.object(
+        router.users_db, "get_user_subscription", return_value=current_sub
+    ), patch.object(router, "is_paid_plan", return_value=True), patch.object(
+        router,
+        "get_plan_type_from_price_id",
+        side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2,
+    ), patch.object(
+        router.stripe.Price, "retrieve", return_value=mock_usd_price
+    ), patch.object(
+        router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)
+    ), patch.object(
+        router, "price_for_currency", side_effect=BillingCurrencyUnavailable("Not available in gbp")
+    ):
 
         request = router.UpgradeSubscriptionRequest(price_id="price_unlimited_usd")
         with pytest.raises(HTTPException) as exc_info:
@@ -185,14 +202,21 @@ def test_upgrade_handles_unexpected_error_during_currency_resolution(payment_rou
     mock_usd_price.currency = "usd"
     mock_usd_price.recurring.interval = "month"
 
-    with patch.object(router, "_validate_price_id"), \
-         patch.object(router.users_db, "get_user_subscription", return_value=current_sub), \
-         patch.object(router, "is_paid_plan", return_value=True), \
-         patch.object(router, "get_plan_type_from_price_id", side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2), \
-         patch.object(router.stripe.Price, "retrieve", return_value=mock_usd_price), \
-         patch.object(router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)), \
-         patch.object(router, "price_for_currency", side_effect=RuntimeError("Transient network failure")), \
-         patch.object(router.logger, "warning") as mock_log_warn:
+    with patch.object(router, "_validate_price_id"), patch.object(
+        router.users_db, "get_user_subscription", return_value=current_sub
+    ), patch.object(router, "is_paid_plan", return_value=True), patch.object(
+        router,
+        "get_plan_type_from_price_id",
+        side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2,
+    ), patch.object(
+        router.stripe.Price, "retrieve", return_value=mock_usd_price
+    ), patch.object(
+        router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)
+    ), patch.object(
+        router, "price_for_currency", side_effect=RuntimeError("Transient network failure")
+    ), patch.object(
+        router.logger, "warning"
+    ) as mock_log_warn:
 
         request = router.UpgradeSubscriptionRequest(price_id="price_unlimited_usd")
         with pytest.raises(HTTPException) as exc_info:
@@ -275,18 +299,29 @@ def test_upgrade_reverifies_currency_binding_for_resolved_price(payment_router):
             return mock_jpy_resolved_price
         return price
 
-    with patch.object(router, "_validate_price_id"), \
-         patch.object(router.users_db, "get_user_subscription", return_value=current_sub), \
-         patch.object(router, "is_paid_plan", return_value=True), \
-         patch.object(router, "get_plan_type_from_price_id", side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2), \
-         patch.object(router.stripe.Price, "retrieve", side_effect=mock_retrieve_price), \
-         patch.object(router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)), \
-         patch.object(router.stripe.Subscription, "modify", return_value=mock_updated_sub) as mock_sub_modify, \
-         patch.object(router.stripe, "SubscriptionSchedule"), \
-         patch.object(router, "management_binding", return_value=(PlanType.unlimited_v2, "month", "jpy")), \
-         patch.object(router, "get_paid_plan_definitions", return_value=[mock_plan_def]), \
-         patch.object(router, "price_for_currency", side_effect=mock_pfc), \
-         patch.object(router.users_db, "update_user_subscription"):
+    with patch.object(router, "_validate_price_id"), patch.object(
+        router.users_db, "get_user_subscription", return_value=current_sub
+    ), patch.object(router, "is_paid_plan", return_value=True), patch.object(
+        router,
+        "get_plan_type_from_price_id",
+        side_effect=lambda p: PlanType.plus if "plus" in p else PlanType.unlimited_v2,
+    ), patch.object(
+        router.stripe.Price, "retrieve", side_effect=mock_retrieve_price
+    ), patch.object(
+        router.stripe.Subscription, "retrieve", return_value=MagicMock(to_dict=lambda: stripe_sub_dict)
+    ), patch.object(
+        router.stripe.Subscription, "modify", return_value=mock_updated_sub
+    ) as mock_sub_modify, patch.object(
+        router.stripe, "SubscriptionSchedule"
+    ), patch.object(
+        router, "management_binding", return_value=(PlanType.unlimited_v2, "month", "jpy")
+    ), patch.object(
+        router, "get_paid_plan_definitions", return_value=[mock_plan_def]
+    ), patch.object(
+        router, "price_for_currency", side_effect=mock_pfc
+    ), patch.object(
+        router.users_db, "update_user_subscription"
+    ):
 
         request = router.UpgradeSubscriptionRequest(price_id="price_unlimited_usd")
         response = router.upgrade_subscription_endpoint(request, uid=uid)
