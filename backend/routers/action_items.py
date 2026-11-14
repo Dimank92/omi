@@ -79,15 +79,17 @@ logger = logging.getLogger(__name__)
 CreateActionItemRequest = ActionItemCreateRequest
 UpdateActionItemRequest = ActionItemUpdateRequest
 
-SAFE_TASK_RELATIONSHIP_MESSAGES = frozenset({
-    'goal does not exist',
-    'goal account generation mismatch',
-    'ended goal cannot receive new task links',
-    'workstream does not exist',
-    'workstream account generation mismatch',
-    'task goal_id must match workstream goal_id',
-    'document id belongs to another account generation',
-})
+SAFE_TASK_RELATIONSHIP_MESSAGES = frozenset(
+    {
+        'goal does not exist',
+        'goal account generation mismatch',
+        'ended goal cannot receive new task links',
+        'workstream does not exist',
+        'workstream account generation mismatch',
+        'task goal_id must match workstream goal_id',
+        'document id belongs to another account generation',
+    }
+)
 
 
 def _sanitize_task_relationship_error(exc: Exception, fallback: str) -> str:
