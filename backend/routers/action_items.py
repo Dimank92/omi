@@ -92,7 +92,7 @@ SAFE_TASK_RELATIONSHIP_MESSAGES = frozenset({
 
 def _sanitize_task_relationship_error(exc: Exception, fallback: str) -> str:
     """Sanitize task relationship conflict details while preserving debug logging."""
-    logger.warning("Task relationship conflict: %s: %s", type(exc).__name__, exc)
+    logger.warning("Task relationship conflict: %s", type(exc).__name__)
     msg = str(exc).strip()
     if msg in SAFE_TASK_RELATIONSHIP_MESSAGES:
         return msg
