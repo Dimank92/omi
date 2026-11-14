@@ -96,7 +96,7 @@ _KNOWN_GOAL_VALIDATIONS = {
 
 
 def _sanitize_goal_validation_error(exc: Exception) -> str:
-    logger.warning(f"Goal validation error: {type(exc).__name__}: {exc}")
+    logger.warning(f"Goal validation error: {type(exc).__name__}")
     detail = str(exc)
     if detail in _KNOWN_GOAL_VALIDATIONS:
         return detail
@@ -104,7 +104,7 @@ def _sanitize_goal_validation_error(exc: Exception) -> str:
 
 
 def _sanitize_goal_conflict_error(exc: Exception) -> str:
-    logger.warning(f"Goal mutation conflict: {type(exc).__name__}: {exc}")
+    logger.warning(f"Goal mutation conflict: {type(exc).__name__}")
     detail = str(exc)
     if detail in _KNOWN_GOAL_CONFLICTS:
         return detail
@@ -154,7 +154,7 @@ def _raise_goal_store_error(exc: Exception) -> None:
         raise HTTPException(status_code=422, detail=_sanitize_goal_validation_error(exc)) from exc
     if isinstance(exc, goals_db.GoalConflictError):
         raise HTTPException(status_code=409, detail=_sanitize_goal_conflict_error(exc)) from exc
-    logger.error(f"Unexpected goal store error: {type(exc).__name__}: {exc}")
+    logger.error(f"Unexpected goal store error: {type(exc).__name__}")
     raise HTTPException(status_code=500, detail="Failed to process goal operation") from exc
 
 
