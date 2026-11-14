@@ -77,7 +77,7 @@ def submit_csat_rating(
         )
     except Exception as e:
         logger.error("Failed to submit CSAT rating for uid %s: %s", uid, type(e).__name__)
-        raise HTTPException(status_code=503, detail="CSAT service temporarily unavailable") from e
+        raise HTTPException(status_code=500, detail="Failed to record CSAT rating") from e
 
     if not created:
         # One rating per user per platform; the existing answer stands.
