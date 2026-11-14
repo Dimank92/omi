@@ -62,6 +62,10 @@ def _require_candidate_write_control(uid: str, account_generation: int) -> None:
 
 
 _KNOWN_CANDIDATE_CONFLICTS = {
+    'Candidate already accepted',
+    'Candidate already dismissed',
+    'Candidate already expired',
+    'Candidate already processed',
     'Candidate suggestion has expired',
     'Candidate resolution is already claimed',
     'Summary action item changed; refresh the conversation',
@@ -96,15 +100,18 @@ def _sanitize_task_link_validation_error(exc: Exception) -> str:
 
 def _sanitize_candidate_conflict(exc: Exception) -> str:
     msg = str(exc)
-    if msg.startswith('Candidate already ') or msg in _KNOWN_CANDIDATE_CONFLICTS:
+    if msg in _KNOWN_CANDIDATE_CONFLICTS:
         return msg
-    logger.warning('Candidate mutation conflict: %s: %s', type(exc).__name__, exc)
+    for status_val in ('accepted', 'dismissed', 'expired', 'processed', 'completed', 'staged'):
+        if msg == f'Candidate already {status_val}':
+            return msg
+    logger.warning('Candidate mutation conflict: %s', type(exc).__name__)
     return 'Candidate operation conflict. Please verify state and retry.'
 
 
 def _sanitize_candidate_error(exc: Exception, fallback: str) -> str:
     """Sanitize candidate store and resolution exception details while preserving debug logging."""
-    logger.warning('Candidate store operation failed: %s: %s', type(exc).__name__, exc)
+    logger.warning('Candidate store operation failed: %s', type(exc).__name__)
     return fallback
 
 

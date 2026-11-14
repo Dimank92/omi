@@ -35,10 +35,15 @@ def test_sanitize_candidate_error_behavior():
     fallback = "Candidate operation could not be completed"
 
     # 1. Store error returns fallback
-    assert sanitize(candidates_db.CandidateStoreError("database query failed with internal schema"), fallback) == fallback
+    assert (
+        sanitize(candidates_db.CandidateStoreError("database query failed with internal schema"), fallback) == fallback
+    )
 
     # 2. Raw traceback filtered to fallback
-    assert sanitize(ValueError("Traceback (most recent call last):\n  File 'x.py', line 1\nZeroDivisionError"), fallback) == fallback
+    assert (
+        sanitize(ValueError("Traceback (most recent call last):\n  File 'x.py', line 1\nZeroDivisionError"), fallback)
+        == fallback
+    )
 
     # 3. Empty exception detail falls back cleanly
     assert sanitize(candidates_db.CandidateStoreError(""), fallback) == fallback
@@ -137,3 +142,24 @@ def test_accept_candidate_task_link_error_handling():
         assert ctx.value.status_code == 409
         assert ctx.value.detail == "Task link validation failed"
         assert "Traceback" not in ctx.value.detail
+
+
+def test_sanitize_candidate_conflict_sanitizes_untrusted_suffixes():
+    sanitize_conflict = getattr(candidates_router, "_sanitize_candidate_conflict", None)
+    assert sanitize_conflict is not None
+
+    # 1. Known candidate already status strings are preserved
+    assert (
+        sanitize_conflict(candidates_db.CandidateConflictError("Candidate already accepted"))
+        == "Candidate already accepted"
+    )
+    assert (
+        sanitize_conflict(candidates_db.CandidateConflictError("Candidate already dismissed"))
+        == "Candidate already dismissed"
+    )
+
+    # 2. Arbitrary or injection string starting with "Candidate already " is sanitized
+    assert (
+        sanitize_conflict(candidates_db.CandidateConflictError("Candidate already in private table doc /user/123"))
+        == "Candidate operation conflict. Please verify state and retry."
+    )
