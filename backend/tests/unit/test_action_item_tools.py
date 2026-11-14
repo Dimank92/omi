@@ -97,6 +97,19 @@ def _action_item_tools_module():
         snapshot=MagicMock(return_value={"before": {}, "after": {}}),
     )
 
+    mock_tool_services_ai = _module(
+        "utils.retrieval.tool_services.action_items",
+        create_action_item=lambda uid, data, **kwargs: mock_db.create_action_item(uid, data, **kwargs),
+    )
+
+    class TaskSourceValidationError(ValueError):
+        pass
+
+    mock_task_intel = _module(
+        "utils.task_intelligence.task_source_validation",
+        TaskSourceValidationError=TaskSourceValidationError,
+    )
+
     utils_pkg = _package("utils")
     model_text_mod = load_module_fresh(
         "utils.model_text",
@@ -122,6 +135,10 @@ def _action_item_tools_module():
         "utils.retrieval": _package("utils.retrieval"),
         "utils.retrieval.turn_refs": mock_refs,
         "utils.retrieval.chat_scope": mock_scope,
+        "utils.retrieval.tool_services": _package("utils.retrieval.tool_services"),
+        "utils.retrieval.tool_services.action_items": mock_tool_services_ai,
+        "utils.task_intelligence": _package("utils.task_intelligence"),
+        "utils.task_intelligence.task_source_validation": mock_task_intel,
         "utils.user_clock": mock_clock,
     }
 
