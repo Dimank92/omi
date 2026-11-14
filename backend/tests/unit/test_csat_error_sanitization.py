@@ -33,9 +33,7 @@ if os.path.isdir(_BACKEND) and os.path.abspath(_BACKEND) not in sys.path:
 # 1) Source-level checks
 # ---------------------------------------------------------------------------
 
-_ROUTER_PATH = os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir, "routers", "csat.py"
-)
+_ROUTER_PATH = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "routers", "csat.py")
 
 
 class TestCsatSourceSanitization(unittest.TestCase):
@@ -126,9 +124,7 @@ class TestCsatSubmitBehavior(unittest.TestCase):
         mock_csat_db.PLATFORMS = {"macos", "windows", "ios", "android"}
         mock_csat_db.MAX_APP_VERSION_LENGTH = 32
         mock_csat_db.MAX_COMMENT_LENGTH = 500
-        mock_csat_db.submit_rating.side_effect = RuntimeError(
-            "Firestore doc csat_ratings/macos_u123 unavailable"
-        )
+        mock_csat_db.submit_rating.side_effect = RuntimeError("Firestore doc csat_ratings/macos_u123 unavailable")
 
         from fastapi.testclient import TestClient
 
@@ -197,34 +193,22 @@ class TestCsatSubmitBehavior(unittest.TestCase):
 
 
 class TestCsatConfigBehavior(unittest.TestCase):
-    """get_csat_config must fall back to DEFAULT_CONFIG on failure."""
+    """get_csat_config must return sanitized 503 on database failure."""
 
     @patch("routers.csat.csat")
-    def test_config_fallback_on_exception(self, mock_csat_db):
-        """DB failure → 200 with DEFAULT_CONFIG, never 500."""
-        mock_csat_db.get_product_config.side_effect = RuntimeError(
-            "Firestore collection csat_config unavailable"
-        )
-        mock_csat_db.DEFAULT_CONFIG = {
-            "enabled": True,
-            "title": "How would you rate Omi Desktop?",
-            "body": "",
-            "thank_you_text": "Thank you!",
-            "refer_cta_text": "Enjoying Omi? Give a friend a free month.",
-            "question_threshold": 3,
-            "comment_max_score": 3,
-            "revision": 0,
-        }
+    def test_config_failure_returns_503(self, mock_csat_db):
+        """DB failure → 503 service unavailable, never leaks internals or returns fake 200."""
+        mock_csat_db.get_product_config.side_effect = RuntimeError("Firestore collection csat_config unavailable")
 
         from fastapi.testclient import TestClient
 
         app = _make_test_app()
         client = TestClient(app)
         resp = client.get("/v1/csat/config?platform=macos")
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 503)
         body = resp.json()
         self.assertNotIn("csat_config", str(body))
-        self.assertTrue(body["enabled"])
+        self.assertEqual(body.get("detail"), "CSAT service temporarily unavailable")
 
     @patch("routers.csat.csat")
     def test_config_success_returns_200(self, mock_csat_db):

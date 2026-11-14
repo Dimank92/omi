@@ -48,8 +48,8 @@ def get_csat_config(
     try:
         return CsatConfigResponse(**csat.get_product_config())
     except Exception as e:
-        logger.warning(f"Failed to fetch CSAT config: {e}", exc_info=True)
-        return CsatConfigResponse(**csat.DEFAULT_CONFIG)
+        logger.error("Failed to fetch CSAT config: %s", type(e).__name__)
+        raise HTTPException(status_code=503, detail="CSAT service temporarily unavailable") from e
 
 
 @router.post('/v1/csat/ratings', response_model=CsatRatingReceipt, status_code=201)
@@ -76,7 +76,7 @@ def submit_csat_rating(
             revision=payload.revision,
         )
     except Exception as e:
-        logger.error(f"Failed to submit CSAT rating for uid {uid}: {e}", exc_info=True)
+        logger.error("Failed to submit CSAT rating for uid %s: %s", uid, type(e).__name__)
         raise HTTPException(status_code=503, detail="CSAT service temporarily unavailable") from e
 
     if not created:
