@@ -1423,13 +1423,13 @@
       "budget_p50_minutes": 45,
       "display_name": "deploy",
       "expected_runs_class": "non-pr",
-      "expected_runs_per_day": 0,
+      "expected_runs_per_day": 1,
       "if": "inputs.operation != 'margin_scheduler'",
       "matrix": {},
       "matrix_size": 1,
       "needs": [],
       "owner": "CI maintainers",
-      "rationale": "Manual or one-branch prod deploy of the finops unit-cost job, including one producer execution. Not a pull-request check.",
+      "rationale": "Retain the 45-minute producer deployment budget. Forecast one manual maintenance invocation per day during the margin migration; the deploy job is excluded for margin_scheduler, which performs no ledger build or deploy.",
       "reusable": null,
       "runner": "linux",
       "runner_counts": {
@@ -1441,7 +1441,7 @@
       "budget_p50_minutes": 5,
       "display_name": "margin-scheduler",
       "expected_runs_class": "non-pr",
-      "expected_runs_per_day": 0,
+      "expected_runs_per_day": 1,
       "if": "inputs.operation == 'margin_scheduler'",
       "matrix": {},
       "matrix_size": 1,
@@ -5016,7 +5016,7 @@
     "gcp_finops_unit_cost_job.yml": {
       "name": "Deploy FinOps Unit Cost Job to Cloud Run",
       "owner": "CI maintainers",
-      "rationale": "Manual workflow_dispatch deploy of the finops unit-cost Cloud Run job. Not a pull-request check.",
+      "rationale": "Manual FinOps operations: default settled-ledger deployment, plus a disjoint margin-scheduler-only operation after approved cutover. Never a pull-request or periodic CI trigger.",
       "triggers": {
         "workflow_dispatch": {
           "inputs": {
