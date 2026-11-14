@@ -23,6 +23,7 @@ os.environ.setdefault("OPENAI_API_KEY", "***")
 import database.goals as goals_db
 from routers import goals as goals_router
 
+
 def test_sanitize_goal_conflict_error_allowlist_and_fallback():
     sanitize = getattr(goals_router, "_sanitize_goal_conflict_error", None)
     assert sanitize is not None, "_sanitize_goal_conflict_error must be defined in routers.goals"
@@ -36,11 +37,26 @@ def test_sanitize_goal_conflict_error_allowlist_and_fallback():
         == "idempotency key was reused with different content"
     )
     assert sanitize(GoalConflictError("ended goals cannot be focused")) == "ended goals cannot be focused"
-    assert sanitize(GoalConflictError("first-open account authority unavailable")) == "first-open account authority unavailable"
-    assert sanitize(GoalConflictError("first-open account authority malformed")) == "first-open account authority malformed"
-    assert sanitize(GoalConflictError("first-open account/source generation mismatch")) == "first-open account/source generation mismatch"
-    assert sanitize(GoalConflictError("idempotent goal mutation receipt is incomplete")) == "idempotent goal mutation receipt is incomplete"
-    assert sanitize(GoalConflictError("too many relationships to detach atomically")) == "too many relationships to detach atomically"
+    assert (
+        sanitize(GoalConflictError("first-open account authority unavailable"))
+        == "first-open account authority unavailable"
+    )
+    assert (
+        sanitize(GoalConflictError("first-open account authority malformed"))
+        == "first-open account authority malformed"
+    )
+    assert (
+        sanitize(GoalConflictError("first-open account/source generation mismatch"))
+        == "first-open account/source generation mismatch"
+    )
+    assert (
+        sanitize(GoalConflictError("idempotent goal mutation receipt is incomplete"))
+        == "idempotent goal mutation receipt is incomplete"
+    )
+    assert (
+        sanitize(GoalConflictError("too many relationships to detach atomically"))
+        == "too many relationships to detach atomically"
+    )
 
     # 2. Unknown or arbitrary conflict messages strictly fall back to generic message
     assert (
@@ -72,7 +88,9 @@ def test_sanitize_goal_validation_error_allowlist_and_fallback():
 
     # 2. Arbitrary or sensitive validation message filtered to safe generic detail
     assert sanitize(GoalValidationError("Arbitrary internal validator traceback")) == "Invalid goal payload"
-    assert sanitize(GoalValidationError("Postgres syntax error: SELECT * FROM goals WHERE id=1")) == "Invalid goal payload"
+    assert (
+        sanitize(GoalValidationError("Postgres syntax error: SELECT * FROM goals WHERE id=1")) == "Invalid goal payload"
+    )
     assert sanitize(GoalValidationError("")) == "Invalid goal payload"
 
 
