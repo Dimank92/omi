@@ -167,7 +167,7 @@ def linear_graphql_request(
         
         return result.get("data", {})
     except requests.RequestException as e:
-        logger.exception("Linear API request transport failure: %s", e)
+        logger.exception("Linear API request transport failure: %s", type(e).__name__)
         # Transport failures (DNS, sockets, timeouts) can embed host-internal
         # details (errno strings, resolver output); return a fixed message so
         # nothing reflects into chat tool responses or downstream error text.
@@ -694,7 +694,7 @@ async def tool_create_issue(request: Request):
         )
     
     except Exception as e:
-        logger.exception("tool_create_issue failed: %s", e)
+        logger.exception("tool_create_issue failed: %s", type(e).__name__)
         # Never interpolate exception text into chat tool responses: unexpected
         # errors can carry host-internal details. Fixed messages only.
         return ChatToolResponse(error="Failed to create issue. Please try again later.")
@@ -800,7 +800,7 @@ async def tool_list_my_issues(request: Request):
         )
     
     except Exception as e:
-        logger.exception("tool_list_my_issues failed: %s", e)
+        logger.exception("tool_list_my_issues failed: %s", type(e).__name__)
         return ChatToolResponse(error="Failed to list issues. Please try again later.")
 
 
@@ -901,7 +901,7 @@ async def tool_list_recent_issues(request: Request):
         )
     
     except Exception as e:
-        logger.exception("tool_list_recent_issues failed: %s", e)
+        logger.exception("tool_list_recent_issues failed: %s", type(e).__name__)
         return ChatToolResponse(error="Failed to list issues. Please try again later.")
 
 
@@ -1000,7 +1000,7 @@ async def tool_update_issue_status(request: Request):
         )
     
     except Exception as e:
-        logger.exception("tool_update_issue_status failed: %s", e)
+        logger.exception("tool_update_issue_status failed: %s", type(e).__name__)
         return ChatToolResponse(error="Failed to update issue. Please try again later.")
 
 
@@ -1105,7 +1105,7 @@ async def tool_search_issues(request: Request):
         )
     
     except Exception as e:
-        logger.exception("tool_search_issues failed: %s", e)
+        logger.exception("tool_search_issues failed: %s", type(e).__name__)
         return ChatToolResponse(error="Search failed. Please try again later.")
 
 
@@ -1183,7 +1183,7 @@ async def tool_get_issue(request: Request):
         return ChatToolResponse(result="\n".join(details))
     
     except Exception as e:
-        logger.exception("tool_get_issue failed: %s", e)
+        logger.exception("tool_get_issue failed: %s", type(e).__name__)
         return ChatToolResponse(error="Failed to get issue. Please try again later.")
 
 
@@ -1255,7 +1255,7 @@ async def tool_add_comment(request: Request):
         )
     
     except Exception as e:
-        logger.exception("tool_add_comment failed: %s", e)
+        logger.exception("tool_add_comment failed: %s", type(e).__name__)
         return ChatToolResponse(error="Failed to add comment. Please try again later.")
 
 
