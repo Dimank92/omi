@@ -134,12 +134,16 @@ class TestNotificationSettingsTools(unittest.TestCase):
 
     def test_sanitizes_database_exceptions(self):
         notif_db.set_daily_summary_enabled.side_effect = RuntimeError("secret_db_credentials_leak")
-        res = notif_tool.manage_daily_summary_tool.func(
-            action="enable",
-            config=self.config,
-        )
-        self.assertEqual(res, "Failed to update notification settings. Please try again.")
-        self.assertNotIn("secret_db_credentials_leak", res)
+        with unittest.mock.patch.object(notif_tool.logger, "error") as mock_err:
+            res = notif_tool.manage_daily_summary_tool.func(
+                action="enable",
+                config=self.config,
+            )
+            self.assertEqual(res, "Failed to update notification settings. Please try again.")
+            self.assertNotIn("secret_db_credentials_leak", res)
+            mock_err.assert_called_once()
+            self.assertIn("RuntimeError", str(mock_err.call_args))
+            self.assertNotIn("secret_db_credentials_leak", str(mock_err.call_args))
         notif_db.set_daily_summary_enabled.side_effect = None
 
 

@@ -157,5 +157,5 @@ def manage_daily_summary_tool(
             return f"Unknown action: {action}. Use 'enable', 'disable', 'set_time', or 'get_settings'."
 
     except Exception as e:
-        logger.error(f"Error in manage_daily_summary_tool: {e}", exc_info=True)
+        logger.error(f"Error in manage_daily_summary_tool: {type(e).__name__}", exc_info=True)
         return "Failed to update notification settings. Please try again."
