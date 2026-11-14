@@ -2,6 +2,7 @@
 
 import logging
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TypeGuard, cast
 
@@ -69,7 +70,7 @@ class Gate:
         return self.tokens_used if self.window == self.hour() else 0
 
 
-def read(tx, job: dict, now: float, source: str) -> tuple[dict | None, str | None]:
+def read(tx, job: dict, now: Callable[[], float], source: str) -> tuple[dict | None, str | None]:
     """Return the token write, or a bounded refusal. Never refresh the operator heartbeat."""
     if provider_backlog_release_closed():
         return None, 'closed'
@@ -97,7 +98,7 @@ def read(tx, job: dict, now: float, source: str) -> tuple[dict | None, str | Non
     gate = Gate.parse(row)
     if gate is None:
         return None, 'closed'
-    reason = gate.refusal(job, now)
+    reason = gate.refusal(job, now())
     if reason:
         return None, reason
     return {**row, 'window': gate.hour(), 'tokens_used': gate.used() + 1}, None

@@ -402,10 +402,10 @@ class OrderedMerge:
                 held['backlog'] = True
                 if not (tx_fresh and metered):
                     return None
-                # The gate's age and reach limits are judged when it is read, on every attempt,
-                # not when this drain began: earlier transactions and retries take time.
-                read_at = now + (time.monotonic() - started)
-                token, reason = backlog_release.read(tx, candidate, read_at, self.commit_source)
+                # Sample after the gate read on every attempt: its latency, earlier transactions
+                # and retries all count toward heartbeat age and reach, using the injected clock.
+                read_clock = lambda: now + (time.monotonic() - started)
+                token, reason = backlog_release.read(tx, candidate, read_clock, self.commit_source)
                 if reason:
                     backlog['refusal'] = reason
                     return None

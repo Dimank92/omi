@@ -176,6 +176,59 @@ def test_gate_age_is_judged_when_it_is_read_not_when_the_drain_began(monkeypatch
     assert merge(store)['segment_id'] == 'a'  # With no delay the same gate is still young enough.
 
 
+@pytest.mark.parametrize('reason', ['stale', 'reach'])
+@pytest.mark.parametrize('retry', [False, True])
+def test_gate_read_latency_counts_toward_expiry_on_every_attempt(reason, retry, monkeypatch):
+    customer = CustomerData()
+    customer.add_user('synthetic')
+    store = SimStore(customer)
+    ready(store, 'a', capture=NOW - 109)  # Capture ended 99 s ago.
+    opened(store, NOW - 179 if reason == 'stale' else NOW)
+    if reason == 'reach':
+        row = store.rows['backlog_release', 'gate']
+        put(store, 'backlog_release', 'gate', {**row, 'reach_seconds': 100})
+    before = deepcopy(store.rows)
+    elapsed, reads = [0.0], []
+    run = store.run
+    refused = Mock()
+    monkeypatch.setattr(gate, 'REFUSED', refused)
+
+    def delayed_run(body):
+        def attempt(tx):
+            get = tx.get
+
+            def delayed_get(table, key):
+                row = get(table, key)
+                if table == 'backlog_release':
+                    reads.append(True)
+                    elapsed[0] += 0 if retry and len(reads) == 1 else 5
+                return row
+
+            tx.get = delayed_get
+            result = body(tx)
+            if retry and len(reads) == 1:
+                assert result is not None  # First attempt was eligible, but its writes must abort.
+                raise Aborted('retry after an eligible gate read')
+            return result
+
+        try:
+            return run(attempt)
+        except Aborted:
+            return run(attempt)
+
+    clock = Mock(monotonic=lambda: elapsed[0], time=lambda: NOW)
+    with monkeypatch.context() as patch:
+        patch.setattr('utils.batch_pipeline.merge.time', clock)
+        patch.setattr(store, 'run', delayed_run)
+        assert merge(store) is None
+    refused.labels.assert_called_with(reason)
+    assert len(reads) == (2 if retry else 1)
+    assert store.rows == before  # No token, heartbeat, result, job or owner mutation.
+    ready(store, 'fresh', fresh=True, capture=NOW)
+    monkeypatch.setattr(gate, 'read', Mock(side_effect=AssertionError('fresh must not touch gate')))
+    assert merge(store)['segment_id'] == 'fresh'
+
+
 def test_window_ahead_of_the_heartbeat_is_closed(monkeypatch):
     store = MemoryStore()
     ready(store, 'a')
@@ -212,11 +265,13 @@ def test_job_without_a_capture_time_gets_no_token(capture, reach):
     # The ordered queries cannot return a row with no capture time; the gate still refuses one.
     row = dict(state='open', rate_per_hour=2, reach_seconds=reach, window=0, tokens_used=0, updated_at=NOW)
     assert (
-        gate.read(Mock(get=Mock(return_value=row)), {'capture_at': NOW - 20, 'duration_seconds': 10}, NOW, 'test')[1]
+        gate.read(
+            Mock(get=Mock(return_value=row)), {'capture_at': NOW - 20, 'duration_seconds': 10}, lambda: NOW, 'test'
+        )[1]
         is None
     )
     job = {'duration_seconds': 10} if capture is None else {'capture_at': capture, 'duration_seconds': 10}
-    assert gate.read(Mock(get=Mock(return_value=row)), job, NOW, 'test') == (None, 'job')
+    assert gate.read(Mock(get=Mock(return_value=row)), job, lambda: NOW, 'test') == (None, 'job')
 
 
 @pytest.mark.parametrize('release,expected', [('false', False), ('true', True), (None, True)])
@@ -234,7 +289,7 @@ def test_override_and_reach(release, expected, monkeypatch):
 def test_reach_boundary_is_inclusive(ended_ago, reason):
     row = dict(state='open', rate_per_hour=2, reach_seconds=100, window=0, tokens_used=0, updated_at=NOW)
     job = {'capture_at': NOW - ended_ago - 10, 'duration_seconds': 10}
-    assert gate.read(Mock(get=Mock(return_value=row)), job, NOW, 'test')[1] == reason
+    assert gate.read(Mock(get=Mock(return_value=row)), job, lambda: NOW, 'test')[1] == reason
 
 
 def test_uncommittable_fresh_waits_while_backlog_uses_tokens(monkeypatch):
