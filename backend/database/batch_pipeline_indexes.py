@@ -44,6 +44,15 @@ BATCH_PIPELINE_INDEX_REQUIREMENTS = (
     ),
     *(
         FirestoreIndexRequirement(
+            f'{stage}_batch_delivered_share_cohort',
+            f'batch_pipeline_{stage}_jobs',
+            'COLLECTION',
+            (_asc('state'), _asc('enqueued_at')),
+        )
+        for stage in ('prod', 'dev')
+    ),
+    *(
+        FirestoreIndexRequirement(
             f'{stage}_batch_ready_owners',
             f'batch_pipeline_{stage}_jobs',
             'COLLECTION',
