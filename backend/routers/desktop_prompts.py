@@ -1,7 +1,7 @@
 import hashlib
 import logging
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -68,14 +68,14 @@ def rollout_bucket(uid: str, prompt_id: str) -> int:
     """Stable 0-99 bucket per (user, prompt): percentage rollouts hold steady
     across polls instead of re-rolling, and a user lands in different buckets
     for different prompts."""
-    pid = str(prompt_id) if prompt_id is not None else ''
-    u = str(uid) if uid is not None else ''
+    pid = str(prompt_id or '')
+    u = str(uid or '')
     digest = hashlib.sha256(f'{pid}:{u}'.encode()).hexdigest()
     return int(digest[:8], 16) % 100
 
 
 def prompt_matches_audience(doc: Dict[str, Any], uid: str, channel: str, build: int) -> bool:
-    if not isinstance(doc, dict):
+    if not isinstance(cast(Any, doc), dict):
         return False
 
     raw_audience = doc.get('audience')
@@ -109,7 +109,7 @@ def prompt_matches_audience(doc: Dict[str, Any], uid: str, channel: str, build: 
 
 
 def spec_from_doc(doc: Dict[str, Any]) -> Optional[DesktopPromptSpec]:
-    if not isinstance(doc, dict):
+    if not isinstance(cast(Any, doc), dict):
         return None
 
     prompt_type = doc.get('type')
