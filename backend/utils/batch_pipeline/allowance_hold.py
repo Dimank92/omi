@@ -15,11 +15,8 @@ from database._client import get_data_plane_firestore_client
 from database.batch_pipeline_allowance_hold import STATE, OWNERS, enabled, restore_retry
 from utils.batch_pipeline.scheduler import Scheduler
 from utils.referral_campaign import effective_subscription_payload
-from utils.stt_cap_dispatch import funded_allowance
 from database.batch_pipeline_privacy import BatchPrivacyBlocked
 from database.firestore_read_origin import read_origin
-from utils import backfill_hours_cap
-from utils.subscription import TRANSCRIPTION_ALLOWANCE_TRANSIENT_REASONS
 
 CHECK_SECONDS = 300
 CLAIM_SECONDS = 120
@@ -27,6 +24,8 @@ CLAIM_SECONDS = 120
 
 def generation(snapshot: dict, now: float) -> str:
     """Effective authority and its reset periods, never usage counters or content."""
+    from utils import backfill_hours_cap
+
     subscription = snapshot.get('subscription') or {}
     end = subscription.get('current_period_end')
     valid = isinstance(end, (int, float)) and end >= now
@@ -199,6 +198,11 @@ class AllowanceHolds:
 
 
 def entitlement(uid: str, now: float, previous: str | None) -> tuple[str, bool]:
+    # Serving imports this controller before any owner needs entitlement IO.
+    # Keep the billing/provider dependency graph at its admission boundary.
+    from utils.stt_cap_dispatch import funded_allowance
+    from utils.subscription import TRANSCRIPTION_ALLOWANCE_TRANSIENT_REASONS
+
     snapshot = (
         get_data_plane_firestore_client()
         .collection('users')

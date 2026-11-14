@@ -10,6 +10,7 @@ import pytest
 from utils.batch_pipeline.allowance_hold import generation
 from database.batch_pipeline_allowance_hold import enabled
 from utils.batch_pipeline import allowance_hold
+from utils import backfill_hours_cap, stt_cap_dispatch
 from utils.batch_pipeline.scheduler import Scheduler
 from utils.referral_campaign import CAMPAIGN_ID, GRANT_FIELD, effective_subscription_payload
 from utils.transcription_allowance import TranscriptionAllowance
@@ -36,7 +37,7 @@ def test_subscription_expiry_changes_generation_without_a_writer():
 
 
 def test_enabled_backfill_daily_cap_has_a_daily_generation(monkeypatch):
-    monkeypatch.setattr(allowance_hold.backfill_hours_cap, 'cap_enabled', lambda: True)
+    monkeypatch.setattr(backfill_hours_cap, 'cap_enabled', lambda: True)
     user = {'subscription': {'plan': 'unlimited_v2', 'status': 'active'}}
     start = stamp('2026-11-14')
     assert generation(user, start) == generation(user, start + 86399)
@@ -69,7 +70,7 @@ def discovery(monkeypatch):
         return TranscriptionAllowance('managed' if managed else 'on_device', None if managed else 0, 'resolved')
 
     funded = Mock(side_effect=funding)
-    monkeypatch.setattr(allowance_hold, 'funded_allowance', funded)
+    monkeypatch.setattr(stt_cap_dispatch, 'funded_allowance', funded)
     return SimpleNamespace(user=user, now=now, clock=clock, document=document, funded=funded)
 
 
@@ -98,7 +99,7 @@ def test_untrusted_usage_does_not_acknowledge_generation(discovery, reason):
 
 
 def test_reparked_daily_cap_refusal_releases_after_utc_reset(discovery, monkeypatch):
-    monkeypatch.setattr(allowance_hold.backfill_hours_cap, 'cap_enabled', lambda: True)
+    monkeypatch.setattr(backfill_hours_cap, 'cap_enabled', lambda: True)
     discovery.funded.side_effect = lambda *args, **kwargs: TranscriptionAllowance('managed', None, 'resolved')
     store = MemoryStore()
     queue = Scheduler(store)
