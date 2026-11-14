@@ -1334,7 +1334,7 @@ def test_firestore_cut_switches_preserve_operator_next_roll_policy(environment):
         # service that runs the finish sweep, now that the stamping marker is complete. No other
         # service or environment declares it (SCA-1993: the other roles drop it at their next rolls).
         if environment == 'prod' and name == 'backend-integration':
-            assert env['BATCH_PROJECTION_FINISH_BACKOFF_ENABLED'] == {'value': 'true', 'category': 'ops_kill'}
+            assert env['BATCH_PROJECTION_FINISH_BACKOFF_ENABLED'] == {'value': 'true', 'category': 'rollout'}
         else:
             assert 'BATCH_PROJECTION_FINISH_BACKOFF_ENABLED' not in env
         expected = {}
