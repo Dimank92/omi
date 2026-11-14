@@ -262,37 +262,49 @@ def test_spec_from_doc_max_per_day_bool_defaults_to_1():
 @patch("routers.desktop_prompts.list_active_desktop_prompt_snapshots")
 def test_get_desktop_prompts_store_error_boundary(mock_snapshots):
     mock_snapshots.side_effect = RuntimeError("Firestore unavailable")
-    with pytest.raises(HTTPException) as exc_info:
-        get_desktop_prompts(channel="stable", build=100, uid="uid-1")
-    assert exc_info.value.status_code == 500
-    assert exc_info.value.detail == "Failed to load desktop prompts"
+    with patch("routers.desktop_prompts.logger.error") as mock_log:
+        with pytest.raises(HTTPException) as exc_info:
+            get_desktop_prompts(channel="stable", build=100, uid="uid-1")
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Failed to load desktop prompts"
+        mock_log.assert_called_once_with("Failed to load desktop prompts: RuntimeError")
+        assert "Firestore unavailable" not in str(mock_log.call_args)
 
 
 @patch("routers.desktop_prompts.list_active_desktop_prompt_snapshots")
 def test_get_desktop_prompts_corrupted_snapshot_skipped(mock_snapshots):
     # One broken snapshot, one valid snapshot
     s_broken = MockSnapshot("bad-doc", raise_exc=True)
-    s_valid = MockSnapshot("good-doc", {
-        "type": "stars",
-        "question": "Rate us",
-        "audience": {"rollout_pct": 100},
-    })
+    s_valid = MockSnapshot(
+        "good-doc",
+        {
+            "type": "stars",
+            "question": "Rate us",
+            "audience": {"rollout_pct": 100},
+        },
+    )
     mock_snapshots.return_value = [s_broken, s_valid]
 
-    res = get_desktop_prompts(channel="stable", build=100, uid="uid-1")
-    assert isinstance(res, DesktopPromptsResponse)
-    assert len(res.prompts) == 1
-    assert res.prompts[0].id == "good-doc"
+    with patch("routers.desktop_prompts.logger.warning") as mock_warn:
+        res = get_desktop_prompts(channel="stable", build=100, uid="uid-1")
+        assert isinstance(res, DesktopPromptsResponse)
+        assert len(res.prompts) == 1
+        assert res.prompts[0].id == "good-doc"
+        mock_warn.assert_called_once_with("Skipping malformed desktop prompt snapshot bad-doc: RuntimeError")
+        assert "Snapshot broken" not in str(mock_warn.call_args)
 
 
 @patch("routers.desktop_prompts.list_active_desktop_prompt_snapshots")
 def test_get_desktop_prompts_none_snapshot_dict_skipped(mock_snapshots):
     s_none = MockSnapshot("none-doc", data=None)
-    s_valid = MockSnapshot("valid-doc", {
-        "type": "banner",
-        "question": "New update available",
-        "audience": {"rollout_pct": 100},
-    })
+    s_valid = MockSnapshot(
+        "valid-doc",
+        {
+            "type": "banner",
+            "question": "New update available",
+            "audience": {"rollout_pct": 100},
+        },
+    )
     mock_snapshots.return_value = [s_none, s_valid]
 
     res = get_desktop_prompts(channel="stable", build=100, uid="uid-1")
@@ -302,16 +314,22 @@ def test_get_desktop_prompts_none_snapshot_dict_skipped(mock_snapshots):
 
 @patch("routers.desktop_prompts.list_active_desktop_prompt_snapshots")
 def test_get_desktop_prompts_sorted_by_id(mock_snapshots):
-    s_b = MockSnapshot("b-prompt", {
-        "type": "stars",
-        "question": "Question B",
-        "audience": {"rollout_pct": 100},
-    })
-    s_a = MockSnapshot("a-prompt", {
-        "type": "stars",
-        "question": "Question A",
-        "audience": {"rollout_pct": 100},
-    })
+    s_b = MockSnapshot(
+        "b-prompt",
+        {
+            "type": "stars",
+            "question": "Question B",
+            "audience": {"rollout_pct": 100},
+        },
+    )
+    s_a = MockSnapshot(
+        "a-prompt",
+        {
+            "type": "stars",
+            "question": "Question A",
+            "audience": {"rollout_pct": 100},
+        },
+    )
     mock_snapshots.return_value = [s_b, s_a]
 
     res = get_desktop_prompts(channel="stable", build=100, uid="uid-1")
@@ -350,4 +368,3 @@ def test_prompt_matches_audience_rollout_pct_clamped():
     assert not prompt_matches_audience(doc_neg, "uid-1", "stable", 100)
     doc_high = {"id": "p1", "audience": {"rollout_pct": 150}}
     assert prompt_matches_audience(doc_high, "uid-1", "stable", 100)
-

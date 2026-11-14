@@ -169,7 +169,7 @@ def get_desktop_prompts(
     try:
         snapshots = list_active_desktop_prompt_snapshots()
     except Exception as e:
-        logger.error(f"Failed to load desktop prompts: {sanitize(str(e))}")
+        logger.error(f"Failed to load desktop prompts: {type(e).__name__}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to load desktop prompts",
@@ -189,9 +189,7 @@ def get_desktop_prompts(
                 prompts.append(spec)
         except Exception as exc:
             snap_id = getattr(snapshot, 'id', 'unknown')
-            logger.warning(
-                f"Skipping malformed desktop prompt snapshot {sanitize(str(snap_id))}: {sanitize(str(exc))}"
-            )
+            logger.warning(f"Skipping malformed desktop prompt snapshot {sanitize(str(snap_id))}: {type(exc).__name__}")
             continue
 
     prompts.sort(key=lambda p: p.id)
