@@ -78,6 +78,7 @@ _KNOWN_GOAL_CONFLICTS = {
     "ended goals cannot be focused",
     "idempotency key was reused with different content",
     "focus set is full; replacement_goal_id is required",
+    "focus full",
     "replacement_goal_id must name a focused goal",
     "focus_rank is already occupied",
     "use explicit focus management after creating a goal",
